@@ -12,22 +12,21 @@ import (
 func lda_immediate(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
-	a = b
-	a_valid = true
+	env.a = validbyte{b, true}
 	return fmt.Sprintf("lda\t#$%02X", b), pos, false
 }
 
 // inc a
 func inc_accumulator(pos uint32) (disassembled string, newpos uint32, done bool) {
 	// whether or not a is valid does not matter here (if a is invalid the value will not be used anyway)
-	a++
+	env.a.value++
 	return fmt.Sprintf("inc\ta"), pos, false
 }
 
 // dec a
 func dec_accumulator(pos uint32) (disassembled string, newpos uint32, done bool) {
 	// whether or not a is valid does not matter here (if a is invalid the value will not be used anyway)
-	a--
+	env.a.value--
 	return fmt.Sprintf("dec\ta"), pos, false
 }
 
@@ -73,7 +72,7 @@ func op_pop(m string) opcode {
 func sta_zeropage(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
-	addoperandcomment(pos - 2, uint16(b))
+	addoperandcomment(pos-2, uint16(b))
 	return fmt.Sprintf("sta\t$%02X", b), pos, false
 }
 
@@ -81,7 +80,7 @@ func sta_zeropage(pos uint32) (disassembled string, newpos uint32, done bool) {
 func sta_zeropagex(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
-	addoperandcomment(pos - 2, uint16(b))
+	addoperandcomment(pos-2, uint16(b))
 	return fmt.Sprintf("sta\t$%02X,x", b), pos, false
 }
 
@@ -89,7 +88,7 @@ func sta_zeropagex(pos uint32) (disassembled string, newpos uint32, done bool) {
 func sta_indirect(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
-	addoperandcomment(pos - 2, uint16(b))
+	addoperandcomment(pos-2, uint16(b))
 	return fmt.Sprintf("sta\t($%02X)", b), pos, false
 }
 
@@ -97,7 +96,7 @@ func sta_indirect(pos uint32) (disassembled string, newpos uint32, done bool) {
 func sta_indirectx(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
-	addoperandcomment(pos - 2, uint16(b))
+	addoperandcomment(pos-2, uint16(b))
 	return fmt.Sprintf("sta\t($%02X,x)", b), pos, false
 }
 
@@ -105,28 +104,28 @@ func sta_indirectx(pos uint32) (disassembled string, newpos uint32, done bool) {
 func sta_indirecty(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
-	addoperandcomment(pos - 2, uint16(b))
+	addoperandcomment(pos-2, uint16(b))
 	return fmt.Sprintf("sta\t($%02X),y", b), pos, false
 }
 
 // sta hhll
 func sta_absolute(pos uint32) (disassembled string, newpos uint32, done bool) {
 	w, pos := getword(pos)
-	addoperandcomment(pos - 3, w)
+	addoperandcomment(pos-3, w)
 	return fmt.Sprintf("sta\t$%04X", w), pos, false
 }
 
 // sta hhll,x
 func sta_absolutex(pos uint32) (disassembled string, newpos uint32, done bool) {
 	w, pos := getword(pos)
-	addoperandcomment(pos - 3, w)
+	addoperandcomment(pos-3, w)
 	return fmt.Sprintf("sta\t$%04X,x", w), pos, false
 }
 
 // sta hhll,y
 func sta_absolutey(pos uint32) (disassembled string, newpos uint32, done bool) {
 	w, pos := getword(pos)
-	addoperandcomment(pos - 3, w)
+	addoperandcomment(pos-3, w)
 	return fmt.Sprintf("sta\t$%04X,y", w), pos, false
 }
 
@@ -137,12 +136,11 @@ func tam_pageregs(pos uint32) (disassembled string, newpos uint32, done bool) {
 	prstring := ""
 	curpage := 0
 	for i := 0; i < 8; i++ {
-		if b & 1 != 0 {		// mark this one
-			if !a_valid {
-				addcomment(pos - 2, "(!) cannot apply new page because a is not valid")
+		if b&1 != 0 { // mark this one
+			if !env.a.valid {
+				addcomment(pos-2, "(!) cannot apply new page because a is not valid")
 			} else {
-				pages[curpage].which = a
-				pages[curpage].valid = true
+				env.pages[curpage] = env.a
 			}
 			prstring += fmt.Sprintf("#%d,", curpage)
 		}
@@ -150,23 +148,23 @@ func tam_pageregs(pos uint32) (disassembled string, newpos uint32, done bool) {
 		curpage++
 	}
 	if prstring == "" {
-		fmt.Fprintf(os.Stderr, "tam defining nothing at $%X\n", pos - 2)
+		fmt.Fprintf(os.Stderr, "tam defining nothing at $%X\n", pos-2)
 		prstring = "<nothing>"
 	} else {
-		prstring = prstring[:len(prstring) - 1]	// strip trailing comma
+		prstring = prstring[:len(prstring)-1] // strip trailing comma
 	}
 	return fmt.Sprintf("tam\t%s", prstring), pos, false
 }
 
 var tmapages = map[byte]int{
-	0x01:	0,
-	0x02:	1,
-	0x04:	2,
-	0x08:	3,
-	0x10:	4,
-	0x20:	5,
-	0x40:	6,
-	0x80:	7,
+	0x01: 0,
+	0x02: 1,
+	0x04: 2,
+	0x08: 3,
+	0x10: 4,
+	0x20: 5,
+	0x40: 6,
+	0x80: 7,
 }
 
 // tma #nn
@@ -175,12 +173,11 @@ func tma_pageregs(pos uint32) (disassembled string, newpos uint32, done bool) {
 	pos++
 	if _, ok := tmapages[b]; !ok {
 		fmt.Fprintf(os.Stderr, "tma with invalid argument $%02X specified\n", b)
-		invalidate()		// don't know what to do
+		invalidate() // don't know what to do
 		return fmt.Sprintf("tma\t<invalid $%02X>", b), pos, false
 	}
 	page := tmapages[b]
-	a = pages[page].which
-	a_valid = pages[page].valid
+	env.a = env.pages[page]
 	return fmt.Sprintf("tma\t#%d", page), pos, false
 }
 
@@ -194,7 +191,7 @@ func tst_zeropage(pos uint32) (disassembled string, newpos uint32, done bool) {
 	pos++
 	z := bytes[pos]
 	pos++
-	addoperandcomment(pos - 3, uint16(z))
+	addoperandcomment(pos-3, uint16(z))
 	return fmt.Sprintf("tst\t#$%02X,%02X", b, z), pos, false
 }
 
@@ -205,7 +202,7 @@ func tst_zeropagex(pos uint32) (disassembled string, newpos uint32, done bool) {
 	pos++
 	z := bytes[pos]
 	pos++
-	addoperandcomment(pos - 3, uint16(z))
+	addoperandcomment(pos-3, uint16(z))
 	return fmt.Sprintf("tst\t#$%02X,%02X,x", b, z), pos, false
 }
 
@@ -215,7 +212,7 @@ func tst_absolute(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
 	w, pos := getword(pos)
-	addoperandcomment(pos - 4, w)
+	addoperandcomment(pos-4, w)
 	return fmt.Sprintf("tst\t#$%02X,%04X", b, w), pos, false
 }
 
@@ -225,6 +222,6 @@ func tst_absolutex(pos uint32) (disassembled string, newpos uint32, done bool) {
 	b := bytes[pos]
 	pos++
 	w, pos := getword(pos)
-	addoperandcomment(pos - 4, w)
+	addoperandcomment(pos-4, w)
 	return fmt.Sprintf("tst\t#$%02X,%04X,x", b, w), pos, false
 }

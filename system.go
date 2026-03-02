@@ -8,27 +8,27 @@ import (
 // TODO change "valid" to "known"
 
 type validbyte struct {
-	value	byte
-	valid		bool
+	value byte
+	valid bool
 }
 
 type envt struct {
-	a		validbyte
-	pages	[8]validbyte
-	carryflag	validbyte
-	stack	[]validbyte
+	a         validbyte
+	pages     [8]validbyte
+	carryflag validbyte
+	stack     []validbyte
 }
 
 var env *envt
 
-func newenv() *evnt {
+func newenv() *envt {
 	e := new(envt)
 	// TODO verify all this
 	e.a.valid = false
 	for i := 0; i < 7; i++ {
 		e.pages[i].valid = false
 	}
-	e.pages[7].value = 0x00		// we need the vectors at startup
+	e.pages[7].value = 0x00 // we need the vectors at startup
 	e.pages[7].valid = true
 	e.carryflag.value = 0
 	e.carryflag.valid = false
@@ -54,32 +54,29 @@ func invalidate() {
 	env.carryflag.valid = false
 }
 
-func push(value byte, valid bool) {
-	env.stack = append(env.stack, validbyte{
-		value:	value,
-		valid:	valid,
-	})
+func push(v validbyte) {
+	env.stack = append(env.stack, v)
 }
 
-func pop() (value byte, valid bool) {
+func pop() validbyte {
 	if len(env.stack) == 0 {
-		return 0, false	// TODO correct?
+		return validbyte{0, false} // TODO correct?
 	}
-	t := env.stack[len(env.stack) - 1]
-	stack = env.stack[:len(env.stack) - 1]
-	return t.value, t.valid
+	t := env.stack[len(env.stack)-1]
+	env.stack = env.stack[:len(env.stack)-1]
+	return validbyte{t.value, t.valid}
 }
 
 func pusha() {
-	push(env.a, env.a.valid)
+	push(env.a)
 }
 
 func pushinvalid() {
-	push(env.a, false)		// value of a irrelevant
+	push(validbyte{env.a.value, false}) // value of a irrelevant
 }
 
 func popa() {
-	env.a, env.a.valid = pop()
+	env.a = pop()
 }
 
 func saveenv() *envt {

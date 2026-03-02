@@ -3,10 +3,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
-	"flag"
-	"io/ioutil"
 )
 
 var bytes []byte
@@ -24,11 +23,11 @@ const (
 )
 
 var vectorLocs = map[uint32]string{
-	0x1FFE:	"EntryPoint",
-	0x1FFC:	"NMI",
-	0x1FFA:	"TimerInterrupt",
-	0x1FF8:	"IRQ1",
-	0x1FF6:	"IRQ2_BRK",
+	0x1FFE: "EntryPoint",
+	0x1FFC: "NMI",
+	0x1FFA: "TimerInterrupt",
+	0x1FF8: "IRQ1",
+	0x1FF6: "IRQ2_BRK",
 }
 
 func errorf(format string, args ...interface{}) {
@@ -58,7 +57,7 @@ func main() {
 
 	filename := flag.Arg(0)
 
-	bytes, err = ioutil.ReadFile(filename)
+	bytes, err = os.ReadFile(filename)
 	if err != nil {
 		errorf("error reading input file %s: %v", filename, err)
 	}
@@ -82,7 +81,7 @@ func main() {
 		if err != nil {
 			errorf("internal error: could not get physical address for %s vector (meaning something is up with the paging or the game actually does have the vector outside page 7): %v\n", label, err)
 		}
-		if labels[pos] != "" {		// if already defined as a different vector, concatenate the labels to make sure everything is represented
+		if labels[pos] != "" { // if already defined as a different vector, concatenate the labels to make sure everything is represented
 			// TODO because this uses a map, it will not be in vector order
 			labels[pos] = labels[pos] + "_" + label
 		} else {

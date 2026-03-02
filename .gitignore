@@ -1,0 +1,10 @@
+*
+
+!.gitignore
+!LICENSE
+!README
+!TODO
+
+!go.mod
+!go.sum
+!*.go
