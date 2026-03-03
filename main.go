@@ -6,29 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/emerikaji/huc6280disasm/op"
 )
-
-var bytes []byte
-var instructions map[uint32]string
-var labels map[uint32]string
-var labelpriorities map[uint32]int
-var labelplaces map[uint32]uint32
-var comments map[uint32]string
-
-const (
-	lpLoc = iota
-	lpLocret
-	lpSub
-	lpUser
-)
-
-var vectorLocs = map[uint32]string{
-	0x1FFE: "EntryPoint",
-	0x1FFC: "NMI",
-	0x1FFA: "TimerInterrupt",
-	0x1FF8: "IRQ1",
-	0x1FF6: "IRQ2_BRK",
-}
 
 func errorf(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
@@ -47,8 +27,6 @@ func usage() {
 }
 
 func main() {
-	var err error
-
 	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() != 1 {
@@ -57,7 +35,7 @@ func main() {
 
 	filename := flag.Arg(0)
 
-	bytes, err = os.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		errorf("error reading input file %s: %v", filename, err)
 	}
@@ -68,30 +46,9 @@ func main() {
 		errorf("given input file %s too large (this restriction may be lifted in the future)", filename)
 	}
 
-	instructions = map[uint32]string{}
-	labels = map[uint32]string{}
-	labelpriorities = map[uint32]int{}
-	labelplaces = map[uint32]uint32{}
-	comments = map[uint32]string{}
+	run := op.NewRunner(bytes, *useStack)
 
-	// autoanalyze vectors
-	for addr, label := range vectorLocs {
-		posw, _ := getword(addr)
-		pos, err := physical(posw)
-		if err != nil {
-			errorf("internal error: could not get physical address for %s vector (meaning something is up with the paging or the game actually does have the vector outside page 7): %v\n", label, err)
-		}
-		if labels[pos] != "" { // if already defined as a different vector, concatenate the labels to make sure everything is represented
-			// TODO because this uses a map, it will not be in vector order
-			labels[pos] = labels[pos] + "_" + label
-		} else {
-			labels[pos] = label
-		}
-		labelpriorities[pos] = lpSub
-		disassemble(pos)
+	if label, err := run.StartDisassembly(); err != nil {
+		errorf("internal error: could not get physical address for %s vector (meaning something is up with the paging or the game actually does have the vector outside page 7): %v\n", label, err)
 	}
-
-	// TODO read additional starts from standard input
-
-	print()
 }
