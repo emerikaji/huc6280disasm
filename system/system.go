@@ -1,3 +1,4 @@
+// Package system keeps track of the variables during disassembly.
 package system
 
 import (

@@ -1,5 +1,6 @@
-// 5 april 2013
-// from tms34010disasm - 17 march 2013
+// from huc6280disasm
+// original 26 april 2013
+// modified 3 february 2025
 package main
 
 import (

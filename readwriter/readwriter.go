@@ -1,4 +1,4 @@
-// Package readwriter reads ROM information
+// Package readwriter reads ROM information and writes output assembly code.
 package readwriter
 
 import (
